@@ -34,7 +34,3 @@ except KeyboardInterrupt:
     # Stop playback and cleanup pygame mixer
     pygame.mixer.music.stop()
     pygame.mixer.quit()
-    print("\nScript Terminated.")
-
-
-
