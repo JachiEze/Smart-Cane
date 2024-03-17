@@ -41,7 +41,6 @@ try:
         print("Distance:", distance, "cm")
 
         if distance <= 100:
-            print("Distance is 100cm or less. Playing MP3 file.")
             pygame.mixer.music.play()
 
         time.sleep(2)  # Wait for 2 seconds before the next measurement
