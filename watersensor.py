@@ -13,8 +13,8 @@ MAX_ADC_VALUE = 32767
 pygame.mixer.init()
 
 # Load the MP3 file
-mp3_file = "waterdetected.mp3"
-pygame.mixer.music.load(mp3_file)
+water_file = "waterdetected.mp3"
+pygame.mixer.music.load(water_file)
 
 try:
     while True:
