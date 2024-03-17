@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import RPi.GPIO as GPIO
 import time
+import pygame
 
 try:
     GPIO.setmode(GPIO.BOARD)
@@ -15,6 +16,13 @@ try:
 
     print("Waiting for sensor to settle")
     time.sleep(2)
+
+    # Initialize pygame mixer
+    pygame.mixer.init()
+
+    # Load the MP3 file
+    mp3_file = "your_mp3_file.mp3"
+    pygame.mixer.music.load(mp3_file)
 
     while True:  # Run continuously
         print("Calculating distance")
@@ -32,10 +40,11 @@ try:
         distance = round(pulse_duration * 17150, 2)
         print("Distance:", distance, "cm")
 
+        if distance <= 100:
+            print("Distance is 100cm or less. Playing MP3 file.")
+            pygame.mixer.music.play()
+
         time.sleep(2)  # Wait for 2 seconds before the next measurement
 
 finally:
     GPIO.cleanup()
-
-
-
