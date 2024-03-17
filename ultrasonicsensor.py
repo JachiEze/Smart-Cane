@@ -21,8 +21,8 @@ try:
     pygame.mixer.init()
 
     # Load the MP3 file
-    mp3_file = "obstructiondetected.mp3"
-    pygame.mixer.music.load(mp3_file)
+    obstruction_file = "obstructiondetected.mp3"
+    pygame.mixer.music.load(obstruction_file)
 
     while True:  # Run continuously
         print("Calculating distance")
