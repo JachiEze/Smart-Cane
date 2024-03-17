@@ -21,7 +21,7 @@ try:
     pygame.mixer.init()
 
     # Load the MP3 file
-    mp3_file = "your_mp3_file.mp3"
+    mp3_file = "obstructiondetected.mp3"
     pygame.mixer.music.load(mp3_file)
 
     while True:  # Run continuously
