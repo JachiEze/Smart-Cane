@@ -1,58 +1,76 @@
-import threading
+import http.client
+import urllib.request
+import urllib.parse
+import urllib.error
 import time
 import cv2
 import numpy as np
+import pyttsx3
 import RPi.GPIO as GPIO
 import pygame
 import Adafruit_ADS1x15
-from GPS_API import Message, start_gps_receiver, ready_gps_receiver, get_latitude, get_longitude
+from GPS_API import *
+import serial
 
-# Initialize GPIO for ultrasonic sensor
+# GPS Setup
+ser = serial.Serial("/dev/ttyACM0") # Select your Serial Port
+ser.baudrate = 9600 # Baud rate
+ser.timeout = 0.5
+sleep = 2 # how many seconds to sleep between posts to the channel
+key = "VQ4O3RCYND2NE9UH" # Thingspeak Write API Key
+msgdata = Message() # Creates a Message Instance
+
+# Object Detection Setup
+net = cv2.dnn.readNet('yolov4-tiny.weights', 'yolov4-tiny.cfg')
+classes = []
+with open("coco.names", "r") as f:
+    classes = f.read().splitlines()
+cap = cv2.VideoCapture(0)
+font = cv2.FONT_HERSHEY_PLAIN
+colors = np.random.uniform(0, 255, size=(100, 3))
+
+# Ultrasonic Sensor Setup
 GPIO.setmode(GPIO.BOARD)
 PIN_TRIGGER = 7
 PIN_ECHO = 11
 GPIO.setup(PIN_TRIGGER, GPIO.OUT)
 GPIO.setup(PIN_ECHO, GPIO.IN)
 GPIO.output(PIN_TRIGGER, GPIO.LOW)
-
-# Initialize pygame mixer for audio feedback
 pygame.mixer.init()
-
-# Load audio files
 obstruction_file = "obstructiondetected.mp3"
-water_file = "waterdetected.mp3"
+pygame.mixer.music.load(obstruction_file)
 
-# Initialize GPS
-msgdata = Message()
-
-# Initialize camera
-net = cv2.dnn.readNet('yolov4-tiny.weights', 'yolov4-tiny.cfg')
-classes = []
-with open("coco.names", "r") as f:
-    classes = f.read().splitlines()
-
-# Initialize ADC for water sensor
+# Water Sensor Setup
 ADC = Adafruit_ADS1x15.ADS1115()
 ADC_CHANNEL = 3
 GAIN = 1
 MIN_ADC_VALUE = 0
 MAX_ADC_VALUE = 32767
+water_file = "waterdetected.mp3"
+pygame.mixer.music.load(water_file)
 
-# Function for uploading GPS data to cloud
 def upload_cloud():
-    while True:
-        temp = get_latitude(msgdata)
-        temp1 = get_longitude(msgdata)
-        # Code for uploading to cloud
-        time.sleep(2)
+    temp = get_latitude(msgdata)
+    temp1 = get_longitude(msgdata)
+    params = urllib.parse.urlencode({'field1': temp, 'field2': temp1, 'key': key})
+    headers = {"Content-typZZe": "application/x-www-form-urlencoded", "Accept": "text/plain"}
+    conn = http.client.HTTPConnection("api.thingspeak.com:80")
+    try:
+        conn.request("POST", "/update", params, headers)
+        response = conn.getresponse()
+        print(("Lat:", temp))
+        print(("Long:", temp1))
+        print((response.status, response.reason))
+        conn.close()
+    except KeyboardInterrupt:
+        print("Connection Failed")
 
-# Function for object detection and identification
-def detect_identify():
-    cap = cv2.VideoCapture(0)
-    font = cv2.FONT_HERSHEY_PLAIN
-    colors = np.random.uniform(0, 255, size=(100, 3))
-    
+try:
+    start_gps_receiver(ser, msgdata)
+    time.sleep(2)
+    ready_gps_receiver(msgdata)
     while True:
+        upload_cloud()
         _, img = cap.read()
         height, width, _ = img.shape
         blob = cv2.dnn.blobFromImage(img, 1/255, (416, 416), (0,0,0), swapRB=True, crop=False)
@@ -62,7 +80,6 @@ def detect_identify():
         boxes = []
         confidences = []
         class_ids = []
-
         for output in layerOutputs:
             for detection in output:
                 scores = detection[5:]
@@ -78,9 +95,7 @@ def detect_identify():
                     boxes.append([x, y, w, h])
                     confidences.append((float(confidence)))
                     class_ids.append(class_id)
-
         indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.2, 0.4)
-
         if len(indexes) > 0:
             for i in indexes.flatten():
                 x, y, w, h = boxes[i]
@@ -92,19 +107,12 @@ def detect_identify():
                 engine = pyttsx3.init()
                 engine.say(label)
                 engine.runAndWait()
-        
         cv2.imshow('Image', img)
         key = cv2.waitKey(1)
         if key & 0xFF == ord('q'): # Press q to quit
             break
 
-    cap.release()
-    cv2.destroyAllWindows()
-
-# Function for ultrasonic sensor
-def ultrasonic_sensor():
-    # Code for ultrasonic sensor
-    while True:
+        # Ultrasonic Sensor
         print("Calculating distance")
         GPIO.output(PIN_TRIGGER, GPIO.HIGH)
         time.sleep(0.00001)
@@ -117,36 +125,19 @@ def ultrasonic_sensor():
         distance = round(pulse_duration * 17150, 2)
         print("Distance:", distance, "cm")
         if distance <= 100:
-            pygame.mixer.music.load(obstruction_file)
             pygame.mixer.music.play()
-            time.sleep(2) # Wait for 2 seconds before the next measurement
 
-# Function for water sensor
-def water_sensor():
-    # Code for water sensor
-    while True:
+        # Water Sensor
         adc_value = ADC.read_adc(ADC_CHANNEL, gain=GAIN)
         water_level = (adc_value - MIN_ADC_VALUE) / (MAX_ADC_VALUE - MIN_ADC_VALUE) * 100
         print("ADC Value: {} | Water Level: {:.2f}%".format(adc_value, water_level))
         if water_level >= 25:
-            pygame.mixer.music.load(water_file)
             pygame.mixer.music.play()
-            time.sleep(2)
 
-# Create threads for each functionality
-thread1 = threading.Thread(target=upload_cloud)
-thread2 = threading.Thread(target=detect_identify)
-thread3 = threading.Thread(target=ultrasonic_sensor)
-thread4 = threading.Thread(target=water_sensor)
+        time.sleep(2) # Wait for 2 seconds before the next measurement
 
-# Start threads
-thread1.start()
-thread2.start()
-thread3.start()
-thread4.start()
-
-# Join threads to the main thread
-thread1.join()
-thread2.join()
-thread3.join()
-thread4.join()
+finally:
+    cap.release()
+    GPIO.cleanup()
+    pygame.mixer.music.stop()
+    pygame.mixer.quit()
