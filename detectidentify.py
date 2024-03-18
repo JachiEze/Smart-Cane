@@ -1,74 +1,76 @@
 import cv2
-import numpy as np
 import pyttsx3
+import numpy as np
 
-net = cv2.dnn.readNet('yolov4-tiny.weights', 'yolov4-tiny.cfg')
+# Load the class names
+classNames = []
+classFile = "coco.names"
+with open(classFile, "rt") as f:
+    classNames = f.read().rstrip("\n").split("\n")
 
-classes = []
-with open("coco.names", "r") as f:
-    classes = f.read().splitlines()
+# Set up model configuration and weights paths
+configPath = "ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt"
+weightsPath = "frozen_inference_graph.pb"
 
+# Initialize the neural network for object detection
+net = cv2.dnn_DetectionModel(weightsPath, configPath)
+net.setInputSize(320, 320)
+net.setInputScale(1.0 / 127.5)
+net.setInputMean((127.5, 127.5, 127.5))
+net.setInputSwapRB(True)
+
+# Initialize text-to-speech engine
+engine = pyttsx3.init()
+
+# Dictionary to track the counts for each class
+class_counts = {}
+
+# Set to store detected classes
+detected_classes = set()
+
+# Video capture setup
 cap = cv2.VideoCapture(0)
-font = cv2.FONT_HERSHEY_PLAIN
-colors = np.random.uniform(0, 255, size=(100, 3))
+cap.set(3, 640)
+cap.set(4, 480)
+
+# Function to detect objects
+def getObjects(img, thres, nms, objects=[]):
+    classIds, confs, bbox = net.detect(img, confThreshold=thres, nmsThreshold=nms)
+
+    if len(objects) == 0:
+        objects = classNames
+
+    objectInfo = []
+
+    if len(classIds) != 0:
+        for classId, confidence, box in zip(classIds.flatten(), confs.flatten(), bbox):
+            className = classNames[classId - 1]
+            if className in objects:
+                objectInfo.append([box, className])
+
+                # Speak the detected class name
+                engine.say(f"{className} detected")
+                engine.runAndWait()
+
+                # Draw a box and label on the image
+                cv2.rectangle(img, box, color=(0, 255, 0), thickness=2)
+                cv2.putText(img, className.upper(), (box[0] + 10, box[1] + 30),
+                            cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(img, str(round(confidence * 100, 2)), (box[0] + 200, box[1] + 30),
+                            cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+
+    return img, objectInfo
 
 while True:
-    _, img = cap.read()
-    height, width, _ = img.shape
+    success, img = cap.read()
+    result, objectInfo = getObjects(img, 0.60, 0.2)
+    cv2.imshow("Output", img)
 
-    blob = cv2.dnn.blobFromImage(img, 1/255, (416, 416), (0,0,0), swapRB=True, crop=False)
-    net.setInput(blob)
-    output_layers_names = net.getUnconnectedOutLayersNames()
-    layerOutputs = net.forward(output_layers_names)
-
-    boxes = []
-    confidences = []
-    class_ids = []
-
-    for output in layerOutputs:
-        for detection in output:
-            scores = detection[5:]
-            class_id = np.argmax(scores)
-            confidence = scores[class_id]
-            if confidence > 0.2:
-                center_x = int(detection[0]*width)
-                center_y = int(detection[1]*height)
-                w = int(detection[2]*width)
-                h = int(detection[3]*height)
-
-                x = int(center_x - w/2)
-                y = int(center_y - h/2)
-
-                boxes.append([x, y, w, h])
-                confidences.append((float(confidence)))
-                class_ids.append(class_id)
-
-    indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.2, 0.4)
-
-    if len(indexes) > 0:
-        for i in indexes.flatten():
-            x, y, w, h = boxes[i]
-            label = str(classes[class_ids[i]])
-            confidence = str(round(confidences[i], 2))
-            color = colors[i]
-            cv2.rectangle(img, (x,y), (x+w, y+h), color, 2)
-            cv2.putText(img, label + " " + confidence, (x, y+20), font, 2, (255,255,255), 2)
-            engine = pyttsx3.init()
-            engine.say(label)
-            engine.runAndWait()
-
-    cv2.imshow('Image', img)
+    # Check for 'q' key press
     key = cv2.waitKey(1)
-
-    if key & 0xFF == ord('q'):  # Press q to quit
+    if key == ord('q'):
         break
 
+# Release the video capture object and close the OpenCV window
 cap.release()
 cv2.destroyAllWindows()
-
-
-
-
-
-
-
