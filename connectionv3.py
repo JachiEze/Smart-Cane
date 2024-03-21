@@ -15,16 +15,18 @@ key = "VQ4O3RCYND2NE9UH"  # Thingspeak Write API Key
 msgdata = Message()  # Creates a Message Instance
 
 def upload_cloud():
-    temp = get_latitude(msgdata)
-    temp1 = get_longitude(msgdata)
-    params = urllib.parse.urlencode({'field1': temp, 'field2': temp1, 'key': key})
-    headers = {"Content-typZZe": "application/x-www-form-urlencoded", "Accept": "text/plain"}
+    temp_lat = get_latitude(msgdata)
+    temp_lon = get_longitude(msgdata)
+    temp_alt = get_altitude(msgdata)
+    params = urllib.parse.urlencode({'field1': temp_lat, 'field2': temp_lon, 'field3': temp_alt, 'key': key})
+    headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
     conn = http.client.HTTPConnection("api.thingspeak.com:80")
     try:
         conn.request("POST", "/update", params, headers)
         response = conn.getresponse()
-        print(("Lat:", temp))
-        print(("Long:", temp1))
+        print(("Lat:", temp_lat))
+        print(("Long:", temp_lon))
+        print(("Alt:", temp_alt))
         print((response.status, response.reason))
         conn.close()
     except KeyboardInterrupt:
