@@ -7,8 +7,6 @@ import urllib.error
 import time
 from GPS_API import *  # Assuming GPS_API module is available in your environment
 import serial
-import Adafruit_ADS1x15
-import pygame
 
 # Load the class names
 classNames = []
