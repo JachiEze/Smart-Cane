@@ -33,12 +33,14 @@ def ready_gps_receiver(msg):
         pass
     print("GPS Fix available")
 
-# API to get latitude from the GPS Receiver
 def get_latitude(msg):
     dmesg = msg.msg
-    return dmesg.latitude
+    return dmesg.latitude if hasattr(dmesg, 'latitude') else None
 
-# API to get longitude from the GPS Receiver
 def get_longitude(msg):
     dmesg = msg.msg
-    return dmesg.longitude
+    return dmesg.longitude if hasattr(dmesg, 'longitude') else None
+
+def get_altitude(msg):
+    dmesg = msg.msg
+    return dmesg.altitude if hasattr(dmesg, 'altitude') else None
