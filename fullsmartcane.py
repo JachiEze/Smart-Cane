@@ -105,14 +105,7 @@ try:
         success, img = cap.read()
         result, objectInfo = getObjects(img, 0.60, 0.2)
         cv2.imshow("Output", img)
-
-        # Ultrasonic sensor distance calculation and vibration control
-        duration = get_pulse_time()
-        distance = calculate_distance(duration)
-        vibration = calculate_vibration(distance)
-        motor.value = vibration
-
-        # Upload GPS data to cloud
+        
         upload_cloud()
         time.sleep(sleep)
 
