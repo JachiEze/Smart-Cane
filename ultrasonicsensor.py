@@ -16,13 +16,6 @@ try:
     print("Waiting for sensor to settle")
     time.sleep(2)
 
-    # Initialize pygame mixer
-    pygame.mixer.init()
-
-    # Load the MP3 file
-    obstruction_file = "obstructiondetected.mp3"
-    pygame.mixer.music.load(obstruction_file)
-
     while True:  # Run continuously
         print("Calculating distance")
 
@@ -38,9 +31,6 @@ try:
         pulse_duration = pulse_end_time - pulse_start_time
         distance = round(pulse_duration * 17150, 2)
         print("Distance:", distance, "cm")
-
-        if distance <= 100:
-            pygame.mixer.music.play()
 
         time.sleep(2)  # Wait for 2 seconds before the next measurement
 
