@@ -1,7 +1,6 @@
 import argparse
 import cv2
 import os
-import pyttsx3
 
 from pycoral.adapters.common import input_size
 from pycoral.adapters.detect import get_objects
@@ -10,8 +9,8 @@ from pycoral.utils.edgetpu import make_interpreter
 from pycoral.utils.edgetpu import run_inference
 
 def main():
-    default_model_dir = '/home/group26/Documents/all_models'
-    default_model = 'ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite'
+    default_model_dir = '../all_models'
+    default_model = 'mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite'
     default_labels = 'coco_labels.txt'
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', help='.tflite model path',
@@ -31,9 +30,6 @@ def main():
     labels = read_label_file(args.labels)
     inference_size = input_size(interpreter)
 
-    # Initialize text-to-speech engine
-    engine = pyttsx3.init()
-
     cap = cv2.VideoCapture(args.camera_idx)
 
     while cap.isOpened():
@@ -47,9 +43,6 @@ def main():
         run_inference(interpreter, cv2_im_rgb.tobytes())
         objs = get_objects(interpreter, args.threshold)[:args.top_k]
         cv2_im = append_objs_to_img(cv2_im, inference_size, objs, labels)
-
-        # Speak detected objects
-        speak_detected_objects(objs, labels, engine)
 
         cv2.imshow('frame', cv2_im)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -73,14 +66,6 @@ def append_objs_to_img(cv2_im, inference_size, objs, labels):
         cv2_im = cv2.putText(cv2_im, label, (x0, y0+30),
                              cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 2)
     return cv2_im
-
-def speak_detected_objects(objs, labels, engine):
-    for obj in objs:
-        label = labels.get(obj.id, obj.id)
-        percent = int(100 * obj.score)
-        text = f"{label}"
-        engine.say(text)
-        engine.runAndWait()
 
 if __name__ == '__main__':
     main()
