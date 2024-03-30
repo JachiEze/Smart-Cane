@@ -79,7 +79,7 @@ if __name__ == "__main__":
         for obj in objs:
             label = labels.get(obj.id, obj.id)
             percent = int(100 * obj.score)
-            text = f"{label} with {percent}% confidence."
+            text = f"{label}"
             engine.say(text)
             engine.runAndWait()
 
