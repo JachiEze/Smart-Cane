@@ -78,7 +78,7 @@ def speak_detected_objects(objs, labels, engine):
     for obj in objs:
         label = labels.get(obj.id, obj.id)
         percent = int(100 * obj.score)
-        text = f"{label} detected"
+        text = f"{label}"
         engine.say(text)
         engine.runAndWait()
 
