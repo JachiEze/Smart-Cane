@@ -1,6 +1,5 @@
 import RPi.GPIO as GPIO
 import time
-import pygame
 
 try:
     GPIO.setmode(GPIO.BOARD)
